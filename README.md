@@ -1,6 +1,6 @@
-This code started its public life as a [post](https://delog.wordpress.com/2011/07/19/a-tcp-relay-mechanism-with-node-js/) on my blog several years back. Adding it to GitHub in case someone wants to for it and take it further.
+This code started its public life as a [post](https://delog.wordpress.com/2011/07/19/a-tcp-relay-mechanism-with-node-js/) on my blog several years back.
 
-The relayc.js is meant to be executed on a machine behind a NAT as follows
+The relayc.js script is meant to be executed on a machine behind a NAT as follows
 
 node relayc.js --sh localserver --sp localport --rh relayserver --rp relayport
 
