@@ -1,41 +1,45 @@
-var argv = require("optimist").argv;
+var argv = require("optimist")
+  .usage('Usage: $0 --sh [host] --sp [port] --rh [host] --rp [port]')
+  .demand(['sh', 'sp', 'rh', 'rp'])
+  .argv;
+
 console.log(argv);
- 
+
 var net = require("net");
- 
+
 function connect() {
   var relaySocket = new net.Socket();
   var onceOnly = true;
- 
-  relaySocket.connect(argv.rp, argv.rh, function() {
+
+  relaySocket.connect(argv.rp, argv.rh, function () {
     console.log("relay socket established");
- 
+
     var serverSocket = new net.Socket();
- 
-    serverSocket.connect(argv.sp, argv.sh, function() {
+
+    serverSocket.connect(argv.sp, argv.sh, function () {
       console.log("server socket established");
     });
-    serverSocket.on("data", function(data) {
+    serverSocket.on("data", function (data) {
       try {
         relaySocket.write(data);
-      } catch(ex) {
+      } catch (ex) {
         //console.log(ex);
       }
     });
-    serverSocket.on("close", function(had_error) {
+    serverSocket.on("close", function (had_error) {
       console.log("server socket closed");
       relaySocket.end();
     });
-    serverSocket.on("error", function(exception) {
+    serverSocket.on("error", function (exception) {
       console.log("server socket error");
       console.log(exception);
     });
- 
-    relaySocket.on("data", function(data) {
+
+    relaySocket.on("data", function (data) {
       //console.log(data);
       try {
         serverSocket.write(data);
-      } catch(ex) {
+      } catch (ex) {
         //console.log(ex);
       }
       if (onceOnly) {
@@ -44,15 +48,15 @@ function connect() {
         onceOnly = false;
       }
     });
-    relaySocket.on("close", function(had_error) {
+    relaySocket.on("close", function (had_error) {
       console.log("relay socket closed");
       serverSocket.end();
     });
-    relaySocket.on("error", function(exception) {
+    relaySocket.on("error", function (exception) {
       console.log("relay socket error");
       console.log(exception);
     });
   });
 }
- 
+
 connect();
