@@ -17,14 +17,13 @@ var relay = net.createServer(function (socket) {
   socket.on("data", function (data) {
     var clientSocket = socketPair[uniqueKey(socket)];
     if (clientSocket == undefined) {
-      //console.log("client socket pair not found, discarding data");
-      //socket.end();
+      console.log("client socket pair not found, discarding data");
       return;
     }
     try {
       clientSocket.write(data);
     } catch (ex) {
-      //console.log(ex);
+      console.log(ex);
     }
   });
   socket.on("close", function (had_error) {
@@ -49,7 +48,6 @@ relay.listen(argv.rp);
 
 var server = net.createServer(function (socket) {
   console.log("client socket established");
-  //console.log(socket);
   if (nextSocket == undefined) {
     console.log("  next relay socket not found");
     socket.end();
@@ -61,16 +59,14 @@ var server = net.createServer(function (socket) {
   nextSocket = undefined;
 
   socket.on("data", function (data) {
-    //console.log(data);
     var relaySocket = socketPair[uniqueKey(socket)];
     if (relaySocket == undefined) {
-      //console.log("relay socket pair not found");
       return;
     }
     try {
       relaySocket.write(data);
     } catch (ex) {
-      //console.log(ex);
+      console.log(ex);
     }
   });
   socket.on("close", function (had_error) {
@@ -89,7 +85,6 @@ server.listen(argv.sp);
 
 function uniqueKey(socket) {
   var key = socket.remoteAddress + ':' + socket.remotePort;
-  //console.log(key);
   return key;
 }
 
