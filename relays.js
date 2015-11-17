@@ -1,6 +1,7 @@
+#!/usr/bin/env node
 var argv = require("optimist")
-  .usage('Usage: $0 --rp [port] --sp [port]')
-  .demand(['rp', 'sp'])
+  .usage('Usage: $0 --relayPort [port] --servicePort [port]')
+  .demand(['relayPort', 'servicePort'])
   .argv;
 
 console.log(argv);
@@ -44,7 +45,7 @@ var relay = net.createServer(function (socket) {
     }
   });
 });
-relay.listen(argv.rp);
+relay.listen(argv.relayPort);
 
 var server = net.createServer(function (socket) {
   console.log("client socket established");
@@ -81,7 +82,7 @@ var server = net.createServer(function (socket) {
     delete socketPair[uniqueKey(relaySocket)];
   });
 });
-server.listen(argv.sp);
+server.listen(argv.servicePort);
 
 function uniqueKey(socket) {
   var key = socket.remoteAddress + ':' + socket.remotePort;

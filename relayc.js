@@ -1,6 +1,7 @@
+#!/usr/bin/env node
 var argv = require("optimist")
-  .usage('Usage: $0 --sh [host] --sp [port] --rh [host] --rp [port]')
-  .demand(['sh', 'sp', 'rh', 'rp'])
+  .usage('Usage: $0 --host [host] --port [port] --relayHost [host] --relayPort [port]')
+  .demand(['host', 'port', 'relayHost', 'relayPort'])
   .argv;
 
 console.log(argv);
@@ -11,14 +12,14 @@ function connect() {
   var relaySocket = new net.Socket();
   var serverSocket = undefined;
 
-  relaySocket.connect(argv.rp, argv.rh, function () {
+  relaySocket.connect(argv.relayPort, argv.relayHost, function () {
     console.log("relay socket established");
 
     relaySocket.on("data", function (data) {
       if (serverSocket == undefined) {
         serverSocket = new net.Socket();
     
-        serverSocket.connect(argv.sp, argv.sh, function () {
+        serverSocket.connect(argv.port, argv.host, function () {
           console.log("server socket established");
           serverSocket.write(data);
         });
