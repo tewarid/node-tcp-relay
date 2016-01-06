@@ -4,18 +4,35 @@ var argv = require("optimist")
     .demand(['relayPort', 'servicePort'])
     .argv;
 
-console.log(argv);
+console.info(argv);
 
 var net = require("net");
-
-var nextRelaySocket;
-var pendingSockets = {};
-var socketPair = {};
 
 function uniqueKey(socket) {
     var key = socket.remoteAddress + ':' + socket.remotePort;
     return key;
 }
+
+var availableSockets = {};
+
+function addAvailableSocket(socket) {
+    availableSockets[uniqueKey(socket)] = socket;
+}
+
+function nextAvailableSocket() {
+    var key = Object.keys(availableSockets)[0];
+    var socket = availableSockets[key];
+    delete availableSockets[key];
+    return socket;
+}
+
+function removeFromAvailableSockets(socket) {
+    var o = availableSockets[uniqueKey(socket)];
+    delete availableSockets[uniqueKey(socket)];
+    return o;
+}
+
+var socketPair = {};
 
 function addSocketPair(socket1, socket2) {
     socketPair[uniqueKey(socket1)] = socket2;
@@ -30,50 +47,82 @@ function deleteSocketPair(socket) {
     delete socketPair[uniqueKey(socket)];
 }
 
+var pendingSockets = {};
+
+function appendToPendingSocket(socket, data) {
+    var key = uniqueKey(socket);
+    var o = pendingSockets[key];
+    if (o == undefined) {
+        o = {};
+        o.socket = socket;
+        o.buffers = new Array();
+        pendingSockets[key] = o;
+    }
+    o.buffers[o.buffers.length] = data;
+}
+
+function deletePendingSocket(socket) {
+    var found = false;
+    var key = uniqueKey(socket);
+    var o = pendingSockets[key];
+    if (o != undefined) {
+        delete pendingSockets[key];
+        found = true;
+    }
+    return found;
+}
+
+function processPending(socket) {
+    var processed = false;
+    
+    var key = Object.keys(pendingSockets)[0];
+    var o = pendingSockets[key];
+    if (o != undefined) {
+        addSocketPair(socket, o.socket);
+        console.info("processing pending client...")
+        if (o.buffers.length > 0) {
+            for (var i = 0; i < o.buffers.length; i++) {
+                socket.write(o.buffers[i]);
+            }
+        }
+        delete pendingSockets[key];
+        processed = true;
+    }
+    return processed;
+}
+
 function createRelayServer(port) {
     var relay = net.createServer(function (socket) {
         
-        var key = Object.keys(pendingSockets)[0];
-        var o = pendingSockets[key];
-        if (o != undefined) {
-            console.log("using relay socket for pending client")
-            addSocketPair(socket, o.socket);
-            if (o.buffers.length > 0) {
-                for (var i = 0; i < o.buffers.length; i++) {
-                    socket.write(o.buffers[i]);
-                }
-            }
-            delete pendingSockets[key];
-        } else {        
-            console.log("next relay socket established");
-            nextRelaySocket = socket;            
+        if (!processPending(socket)) {
+            console.info("adding to available relay sockets");
+            addAvailableSocket(socket);                        
         }
         
         socket.on("data", function (data) {
             var clientSocket = getSocketPair(socket);
             if (clientSocket == undefined) {
-                console.log("client socket pair not found, discarding data");
+                console.info("client socket not found, discarding data");
                 return;
             }
             try {
                 clientSocket.write(data);
             } catch (ex) {
-                console.log(ex);
+                console.info(ex);
             }
         });
         
         socket.on("close", function (had_error) {
-            console.log("relay socket closed");
+            console.info("relay socket closed");
 
-            if (nextRelaySocket == socket) {
-                console.log("  no next relay socket")
-                nextRelaySocket = undefined;
+            if (removeFromAvailableSockets(socket)) {
+                console.info("  removing from available relay sockets");
                 return;
             }
 
             var clientSocket = getSocketPair(socket);
             if (clientSocket == undefined) {
-                console.log("  client socket pair not found");
+                console.info("  client socket not found");
             } else {
                 clientSocket.end();
                 deleteSocketPair(socket);
@@ -86,51 +135,36 @@ function createRelayServer(port) {
 function createInternetServer(port) {
     var server = net.createServer(function (socket) {
         
-        console.log("client socket established");
+        console.info("client socket established");
         
-        if (nextRelaySocket == undefined) {
-            console.log("  no next relay socket, buffering...");
-            var key = uniqueKey(socket);
-            var o = pendingSockets[key];
-            if (o == undefined) {
-                o = {};
-                o.socket = socket;
-                o.buffers = new Array();
-                pendingSockets[key] = o;
-            }
+        var relaySocket = nextAvailableSocket();
+        if (relaySocket) {
+            addSocketPair(socket, relaySocket);
         } else {
-            addSocketPair(socket, nextRelaySocket);
-            nextRelaySocket = undefined;            
+            console.info("  no available relay socket, buffering...");
         }
 
         socket.on("data", function (data) {
             var relaySocket = getSocketPair(socket);
             if (relaySocket == undefined) {
-                var o = pendingSockets[uniqueKey(socket)];
-                if (o != undefined) {
-                    o.buffers[o.buffers.length] = data;
-                }
+                appendToPendingSocket(socket, data);
                 return;
             }
             try {
                 relaySocket.write(data);
             } catch (ex) {
-                console.log(ex);
+                console.info(ex);
             }
         });
         
         socket.on("close", function (had_error) {
-            console.log("client socket closed");
+            console.info("client socket closed");
             var relaySocket = getSocketPair(socket);
             if (relaySocket == undefined) {
-                var key = uniqueKey(socket);
-                var o = pendingSockets[key];
-                if (o != undefined) {
-                    delete pendingSockets[key];
-                } else {                
-                    console.log("  relay socket pair not found");
-                    return;
+                if (!deletePendingSocket(socket)) {
+                    console.info("  relay socket not found");
                 }
+                return;
             }
             relaySocket.end();
             deleteSocketPair(socket);
@@ -143,5 +177,5 @@ createRelayServer(argv.relayPort);
 createInternetServer(argv.servicePort);
 
 process.on("uncaughtException", function (err) {
-    console.log(err);
+    console.info(err);
 });
