@@ -85,6 +85,7 @@ RelayClient.prototype.newSocket = function () {
 }
 
 RelayClient.prototype.end = function () {
+    console.log("Terminating relay client");
     for (var key in this.relaySockets) {
         this.relaySockets[key].end();
     }

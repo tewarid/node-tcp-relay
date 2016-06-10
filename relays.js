@@ -15,7 +15,5 @@ process.on("uncaughtException", function (err) {
 });
 
 process.on("SIGINT", function() {
-    console.log("Terminating relay server")
     newRelayServer.end();    
-    process.exit();
 });

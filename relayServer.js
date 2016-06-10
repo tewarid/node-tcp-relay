@@ -177,8 +177,18 @@ RelayServer.prototype.createInternetClientListener = function (port) {
 }
 
 RelayServer.prototype.end = function() {
+    console.log("Terminating relay server")
     this.relay.close();
     this.server.close();
+    for (var key in this.socketPair) {
+        this.socketPair[key].end();
+    }
+    for (var key in this.availableSockets) {
+        this.availableSockets[key].end();
+    }
+    for (var key in this.pendingSockets) {
+        this.pendingSockets[key].end();
+    }
 }
 
 exports.createRelayServer = function (relayPort, internetPort) {
