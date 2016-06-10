@@ -19,8 +19,3 @@ If you're using HTTP/S, use a reverse proxy such as http-proxy, between the rela
 var httpProxy = require('http-proxy');
 httpProxy.createProxyServer({target:'http://host:port'}).listen(port);
 ```
-
-One external module is used in these scripts to parse commands line options. It can be installed using <code>npm</code> as follows
-```bash
-sudo npm -g install optimist@latest
-```

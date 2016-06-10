@@ -6,66 +6,16 @@ var argv = require("optimist")
 
 console.log(argv);
 
-var net = require("net");
+var relayClient = require("./relayClient.js")
 
-function connect() {
-    var relaySocket = new net.Socket();
-    var serverSocket = undefined;
+var newRelayClient = relayClient.createRelayClient(argv.host, argv.port, argv.relayHost, argv.relayPort, argv.numConn);
 
-    relaySocket.connect(argv.relayPort, argv.relayHost, function () {
-        console.log("relay socket established");
+process.on("uncaughtException", function (err) {
+    console.info(err);
+});
 
-        relaySocket.on("data", function (data) {
-            if (serverSocket == undefined) {
-                serverSocket = new net.Socket();
-
-                serverSocket.connect(argv.port, argv.host, function () {
-                    console.log("server socket established");
-                    serverSocket.write(data);
-                });
-                serverSocket.on("data", function (data) {
-                    try {
-                        relaySocket.write(data);
-                    } catch (ex) {
-                        console.log(ex);
-                    }
-                });
-                serverSocket.on("close", function (had_error) {
-                    console.log("server socket closed");
-                    relaySocket.end();
-                });
-                serverSocket.on("error", function (exception) {
-                    console.log("server socket error");
-                    console.log(exception);
-                    relaySocket.end();
-                });
-
-                connect();
-                console.log("next relay socket established");
-            } else {
-                try {
-                    serverSocket.write(data);
-                } catch (ex) {
-                    console.log(ex);
-                }
-            }
-        });
-        relaySocket.on("close", function (had_error) {
-            console.log("relay socket closed");
-            if (serverSocket != undefined)
-                serverSocket.end();
-        });
-        relaySocket.on("error", function (exception) {
-            console.log("relay socket error");
-            console.log(exception);
-        });
-    });
-}
-
-var count = argv.numConn;
-if (count == undefined) {
-    count = 1;
-}
-for (var i = 0; i < count; i++) {
-    connect();
-}
+process.on("SIGINT", function() {
+    console.log("Terminating relay client");
+    newRelayClient.end();
+    process.exit();
+});
