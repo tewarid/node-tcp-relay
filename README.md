@@ -32,7 +32,7 @@ httpProxy.createProxyServer({target:'http://host:port'}).listen(port);
 Create and start a relay client thus
 
 ```javascript
-var relayClient = require("./relay-client.js")
+var relayClient = require("node-tcp-relay")
 var newRelayClient = relayClient.createRelayClient("hostname", 8080, "relayserver", 10080, 1);
 ```
 
@@ -45,8 +45,8 @@ newRelayClient.end();
 Create and start a relay server thus
 
 ```javascript
-var relayServer = require("./relay-server.js");
-var newRelayServer = relayServer.createRelayServer(argv.relayPort, argv.servicePort);
+var relayServer = require("node-tcp-relay");
+var newRelayServer = relayServer.createRelayServer(10080, 10081);
 ```
 
 End relay server
