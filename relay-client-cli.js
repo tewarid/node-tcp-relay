@@ -6,7 +6,7 @@ var argv = require("optimist")
 
 console.log(argv);
 
-var relayClient = require("./relayClient.js")
+var relayClient = require("./relay-client.js")
 
 var newRelayClient = relayClient.createRelayClient(argv.host, argv.port, argv.relayHost, argv.relayPort, argv.numConn);
 

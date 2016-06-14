@@ -1,4 +1,4 @@
-var relayClient = require("./relayClient.js")
-var relayServer = require("./relayServer.js")
+var relayClient = require("./relay-client")
+var relayServer = require("./relay-server")
 exports.createRelayClient = relayClient.createRelayClient;
 exports.createRelayServer = relayServer.createRelayServer;

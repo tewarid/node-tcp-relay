@@ -9,8 +9,8 @@
         "url": "https://github.com/tewarid/node-tcp-relay.git"
     },
     "bin" : { 
-        "tcprelayc" : "./relayc.js",
-        "tcprelays" : "./relays.js" 
+        "tcprelayc" : "./relay-client-cli.js",
+        "tcprelays" : "./relay-server-cli.js" 
     },
     "dependencies": {
         "optimist": "latest"

@@ -6,7 +6,7 @@ var argv = require("optimist")
 
 console.info(argv);
 
-var relayServer = require("./relayServer.js");
+var relayServer = require("./relay-server.js");
 
 var newRelayServer = relayServer.createRelayServer(argv.relayPort, argv.servicePort);
 
