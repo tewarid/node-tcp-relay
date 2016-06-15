@@ -28,9 +28,14 @@ RelayServer.prototype.nextAvailableSocket = function () {
 }
 
 RelayServer.prototype.removeFromAvailableSockets = function(socket) {
-    var o = this.availableSockets[uniqueKey(socket)];
-    delete this.availableSockets[uniqueKey(socket)];
-    return o;
+    var found = false;
+    var key = uniqueKey(socket);
+    var o = this.availableSockets[key];
+    if (o != undefined) {
+        delete this.availableSockets[key];
+        found = true;
+    }
+    return found;
 }
 
 RelayServer.prototype.addSocketPair = function (socket1, socket2) {
@@ -115,17 +120,17 @@ RelayServer.prototype.createRelayClientListener = function (port) {
             console.info("relay socket closed");
 
             if (relayServer.removeFromAvailableSockets(socket)) {
-                console.info("  removing from available relay sockets");
-                return;
-            }
-
-            var clientSocket = relayServer.getSocketPair(socket);
-            if (clientSocket == undefined) {
-                console.info("  client socket not found");
+                console.info("  removed from available relay sockets");
             } else {
-                clientSocket.end();
-                relayServer.deleteSocketPair(socket);
+                var clientSocket = relayServer.getSocketPair(socket);
+                if (clientSocket == undefined) {
+                    console.info("  client socket not found");
+                } else {
+                    clientSocket.end();
+                    relayServer.deleteSocketPair(clientSocket);
+                }
             }
+            relayServer.deleteSocketPair(socket);
         });
     });
     relay.listen(port);
@@ -165,11 +170,14 @@ RelayServer.prototype.createInternetClientListener = function (port) {
             if (relaySocket == undefined) {
                 if (!relayServer.deletePendingSocket(socket)) {
                     console.info("  relay socket not found");
+                } else {
+                    relayServer.deleteSocketPair(socket);                    
                 }
-                return;
+            } else {
+                relaySocket.end();
+                relayServer.deleteSocketPair(relaySocket);
             }
-            relaySocket.end();
-            relayServer.deleteSocketPair(socket);
+            relayServer.deleteSocketPair(socket);            
         });
     });
     server.listen(port);
