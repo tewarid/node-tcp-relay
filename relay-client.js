@@ -27,6 +27,7 @@ RelayClient.prototype.newSocket = function () {
     var relayClient = this;
     var serverSocket = undefined;
     var relaySocket = new net.Socket();
+    var pendingData = undefined;
 
     relaySocket.connect(relayClient.relayPort, relayClient.relayHost, 
     function () {
@@ -36,47 +37,58 @@ RelayClient.prototype.newSocket = function () {
 
         relaySocket.on("data", function (data) {
             if (serverSocket == undefined) {
+                pendingData = data;
+                
                 serverSocket = new net.Socket();
 
                 serverSocket.connect(relayClient.port, relayClient.host, 
                 function () {
                     console.log("server socket established");
-                    serverSocket.write(data);
-                });
-                serverSocket.on("data", function (data) {
-                    try {
-                        relaySocket.write(data);
-                    } catch (ex) {
-                        console.log(ex);
-                    }
-                });
-                serverSocket.on("close", function (had_error) {
-                    console.log("server socket closed");
-                    relaySocket.end();
-                });
-                serverSocket.on("error", function (exception) {
-                    console.log("server socket error");
-                    console.log(exception);
-                    relaySocket.end();
-                    delete relayClient.relaySockets[uniqueKey(relaySocket)];
+
+                    serverSocket.on("data", function (data) {
+                        try {
+                            relaySocket.write(data);
+                        } catch (ex) {
+                            console.log(ex);
+                        }
+                    });
+
+                    serverSocket.on("close", function (had_error) {
+                        console.log("server socket closed");
+                        relaySocket.end();
+                    });
+
+                    serverSocket.on("error", function (exception) {
+                        console.log("server socket error");
+                        console.log(exception);
+                        relaySocket.end();
+                        delete relayClient.relaySockets[uniqueKey(relaySocket)];
+                    });
                 });
 
                 relayClient.newSocket();
                 console.log("next relay socket established");
             } else {
                 try {
+                    if (pendingData != undefined)
+                    {
+                        serverSocket.write(pendingData);
+                        pendingData = undefined;
+                    }
                     serverSocket.write(data);
                 } catch (ex) {
                     console.log(ex);
                 }
             }
         });
+
         relaySocket.on("close", function (had_error) {
             console.log("relay socket closed");
             delete relayClient.relaySockets[uniqueKey(relaySocket)];
             if (serverSocket != undefined)
                 serverSocket.end();
         });
+
         relaySocket.on("error", function (exception) {
             console.log("relay socket error");
             console.log(exception);
