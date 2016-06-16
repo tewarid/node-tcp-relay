@@ -38,12 +38,22 @@ RelayClient.prototype.newSocket = function () {
         relaySocket.on("data", function (data) {
             if (serverSocket == undefined) {
                 pendingData = data;
-                
+
                 serverSocket = new net.Socket();
 
                 serverSocket.connect(relayClient.port, relayClient.host, 
                 function () {
                     console.log("server socket established");
+
+                    if (pendingData != undefined)
+                    {
+                        try {
+                            serverSocket.write(pendingData);
+                            pendingData = undefined;
+                        } catch (ex) {
+                            console.log(ex);
+                        }
+                    }
 
                     serverSocket.on("data", function (data) {
                         try {
