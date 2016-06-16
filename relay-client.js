@@ -25,10 +25,13 @@ function RelayClient(host, port, relayHost, relayPort, numConn) {
 
 RelayClient.prototype.newSocket = function () {
     var relayClient = this;
-    var serverSocket = undefined;
-    var relaySocket = new net.Socket();
-    var pendingData = undefined;
 
+    var serverSocket = undefined;
+    var connected = false;
+    var buffers = new Array();
+
+    var relaySocket = new net.Socket();
+    
     relaySocket.connect(relayClient.relayPort, relayClient.relayHost, 
     function () {
         console.log("relay socket established");
@@ -37,21 +40,17 @@ RelayClient.prototype.newSocket = function () {
 
         relaySocket.on("data", function (data) {
             if (serverSocket == undefined) {
-                pendingData = data;
+                buffers[buffers.length] = data;
 
                 serverSocket = new net.Socket();
-
                 serverSocket.connect(relayClient.port, relayClient.host, 
                 function () {
                     console.log("server socket established");
 
-                    if (pendingData != undefined)
-                    {
-                        try {
-                            serverSocket.write(pendingData);
-                            pendingData = undefined;
-                        } catch (ex) {
-                            console.log(ex);
+                    connected = true;
+                    if (buffers.length > 0) {
+                        for (var i = 0; i < buffers.length; i++) {
+                            serverSocket.write(buffers[i]);
                         }
                     }
 
@@ -78,16 +77,16 @@ RelayClient.prototype.newSocket = function () {
 
                 relayClient.newSocket();
                 console.log("next relay socket established");
+
             } else {
-                try {
-                    if (pendingData != undefined)
-                    {
-                        serverSocket.write(pendingData);
-                        pendingData = undefined;
+                if (!connected) {
+                    buffers[buffers.length] = data;
+                } else {
+                    try {
+                        serverSocket.write(data);
+                    } catch (ex) {
+                        console.log(ex);
                     }
-                    serverSocket.write(data);
-                } catch (ex) {
-                    console.log(ex);
                 }
             }
         });
