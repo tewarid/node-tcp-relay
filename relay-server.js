@@ -123,14 +123,20 @@ RelayServer.prototype.createRelayClientListener = function (port) {
                 console.info("  removed from available relay sockets");
             } else {
                 var clientSocket = relayServer.getSocketPair(socket);
+                relayServer.deleteSocketPair(socket);
                 if (clientSocket == undefined) {
                     console.info("  client socket not found");
                 } else {
-                    clientSocket.end();
                     relayServer.deleteSocketPair(clientSocket);
+                    console.info("  ending client socket");
+                    clientSocket.destroy();
                 }
             }
-            relayServer.deleteSocketPair(socket);
+        });
+
+        socket.on("error", function(e) {
+            console.log("relay socket error");
+            console.log(e);
         });
     });
     relay.listen(port);
@@ -142,7 +148,7 @@ RelayServer.prototype.createInternetClientListener = function (port) {
 
     var server = net.createServer(function (socket) {
         
-        console.info("client socket established");
+        console.info("client connected");
         
         var relaySocket = relayServer.nextAvailableSocket();
         if (relaySocket) {
@@ -166,18 +172,24 @@ RelayServer.prototype.createInternetClientListener = function (port) {
         
         socket.on("close", function (had_error) {
             console.info("client socket closed");
+
             var relaySocket = relayServer.getSocketPair(socket);
+            relayServer.deleteSocketPair(socket);            
             if (relaySocket == undefined) {
-                if (!relayServer.deletePendingSocket(socket)) {
-                    console.info("  relay socket not found");
-                } else {
-                    relayServer.deleteSocketPair(socket);                    
+                console.info("  relay socket not found");
+                if (relayServer.deletePendingSocket(socket)) {
+                    console.info("  pending client socket removed");
                 }
             } else {
-                relaySocket.end();
                 relayServer.deleteSocketPair(relaySocket);
+                console.info("  ending relay socket");
+                relaySocket.destroy();
             }
-            relayServer.deleteSocketPair(socket);            
+        });
+
+        socket.on("error", function(e) {
+            console.log("client socket error");
+            console.log(e);
         });
     });
     server.listen(port);
@@ -189,13 +201,13 @@ RelayServer.prototype.end = function() {
     this.relay.close();
     this.server.close();
     for (var key in this.socketPair) {
-        this.socketPair[key].end();
+        this.socketPair[key].destroy();
     }
     for (var key in this.availableSockets) {
-        this.availableSockets[key].end();
+        this.availableSockets[key].destroy();
     }
     for (var key in this.pendingSockets) {
-        this.pendingSockets[key].end();
+        this.pendingSockets[key].destroy();
     }
 }
 

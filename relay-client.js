@@ -26,7 +26,7 @@ function RelayClient(host, port, relayHost, relayPort, numConn) {
 RelayClient.prototype.newSocket = function () {
     var relayClient = this;
 
-    var serverSocket = undefined;
+    var socket = undefined;
     var connected = false;
     var buffers = new Array();
 
@@ -39,22 +39,23 @@ RelayClient.prototype.newSocket = function () {
         relayClient.relaySockets[uniqueKey(relaySocket)] = relaySocket;
 
         relaySocket.on("data", function (data) {
-            if (serverSocket == undefined) {
+            if (socket == undefined) {
                 buffers[buffers.length] = data;
 
-                serverSocket = new net.Socket();
-                serverSocket.connect(relayClient.port, relayClient.host, 
+                socket = new net.Socket();
+                socket.connect(relayClient.port, relayClient.host, 
                 function () {
-                    console.log("server socket established");
+                    console.log("service socket established");
 
                     connected = true;
                     if (buffers.length > 0) {
                         for (var i = 0; i < buffers.length; i++) {
-                            serverSocket.write(buffers[i]);
+                            socket.write(buffers[i]);
                         }
+                        buffers == undefined;
                     }
 
-                    serverSocket.on("data", function (data) {
+                    socket.on("data", function (data) {
                         try {
                             relaySocket.write(data);
                         } catch (ex) {
@@ -62,17 +63,20 @@ RelayClient.prototype.newSocket = function () {
                         }
                     });
 
-                    serverSocket.on("close", function (had_error) {
-                        console.log("server socket closed");
-                        relaySocket.end();
+                    socket.on("close", function (had_error) {
+                        console.log("service socket closed");
+                        console.log(had_error);
+                        socket == undefined;
+                        console.log("  ending relay socket");
+                        relaySocket.destroy();
                     });
+                });
 
-                    serverSocket.on("error", function (exception) {
-                        console.log("server socket error");
-                        console.log(exception);
-                        relaySocket.end();
-                        delete relayClient.relaySockets[uniqueKey(relaySocket)];
-                    });
+                socket.on("error", function (e) {
+                    console.log("service socket error");
+                    console.log(e);
+                    console.log("  ending relay socket");
+                    relaySocket.destroy();
                 });
 
                 relayClient.newSocket();
@@ -83,7 +87,7 @@ RelayClient.prototype.newSocket = function () {
                     buffers[buffers.length] = data;
                 } else {
                     try {
-                        serverSocket.write(data);
+                        socket.write(data);
                     } catch (ex) {
                         console.log(ex);
                     }
@@ -94,13 +98,13 @@ RelayClient.prototype.newSocket = function () {
         relaySocket.on("close", function (had_error) {
             console.log("relay socket closed");
             delete relayClient.relaySockets[uniqueKey(relaySocket)];
-            if (serverSocket != undefined)
-                serverSocket.end();
+            if (socket != undefined)
+                socket.destroy();
         });
 
-        relaySocket.on("error", function (exception) {
+        relaySocket.on("error", function(e) {
             console.log("relay socket error");
-            console.log(exception);
+            console.log(e);
         });
     });
 }
