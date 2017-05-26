@@ -4,8 +4,6 @@ var argv = require("optimist")
     .demand(['host', 'port', 'relayHost', 'relayPort'])
     .argv;
 
-console.log(argv);
-
 var relayClient = require("./relay-client.js")
 
 var newRelayClient = relayClient.createRelayClient(argv.host, argv.port, argv.relayHost, argv.relayPort, argv.numConn);

@@ -1,216 +1,122 @@
+var util = require("util");
+var EventEmitter = require("events").EventEmitter;
 var net = require("net");
+var crypto = require("crypto");
 
-function uniqueKey(socket) {
-    var key = socket.remoteAddress + ':' + socket.remotePort;
-    return key;
+module.exports = {
+    createRelayServer: function (relayPort, internetPort, options) {
+        return new RelayServer(relayPort, internetPort, options);
+    }
 }
 
-function RelayServer(relayPort, internetPort) {
+function RelayServer(relayPort, internetPort, options) {
+    this.options = options || {};
     this.relayPort = relayPort;
     this.internetPort = internetPort;
-    this.availableSockets = {};
-    this.socketPair = {};
-    this.pendingSockets = {};
+    this.relayListener = new Listener(relayPort);
+    this.internetListener = new Listener(internetPort, {bufferData: true});
 
-    this.relay = this.createRelayClientListener(relayPort);
-    this.server = this.createInternetClientListener(internetPort);
-}
-
-RelayServer.prototype.addAvailableSocket = function (socket) {
-    this.availableSockets[uniqueKey(socket)] = socket;
-}
-
-RelayServer.prototype.nextAvailableSocket = function () {
-    var key = Object.keys(this.availableSockets)[0];
-    var socket = this.availableSockets[key];
-    delete this.availableSockets[key];
-    return socket;
-}
-
-RelayServer.prototype.removeFromAvailableSockets = function(socket) {
-    var found = false;
-    var key = uniqueKey(socket);
-    var o = this.availableSockets[key];
-    if (o != undefined) {
-        delete this.availableSockets[key];
-        found = true;
-    }
-    return found;
-}
-
-RelayServer.prototype.addSocketPair = function (socket1, socket2) {
-    this.socketPair[uniqueKey(socket1)] = socket2;
-    this.socketPair[uniqueKey(socket2)] = socket1;
-}
-
-RelayServer.prototype.getSocketPair = function (socket) {
-    return this.socketPair[uniqueKey(socket)];
-}
-
-RelayServer.prototype.deleteSocketPair = function (socket) {
-    delete this.socketPair[uniqueKey(socket)];
-}
-
-RelayServer.prototype.appendToPendingSocket = function (socket, data) {
-    var key = uniqueKey(socket);
-    var o = this.pendingSockets[key];
-    if (o == undefined) {
-        o = {};
-        o.socket = socket;
-        o.buffers = new Array();
-        this.pendingSockets[key] = o;
-    }
-    o.buffers[o.buffers.length] = data;
-}
-
-RelayServer.prototype.deletePendingSocket = function (socket) {
-    var found = false;
-    var key = uniqueKey(socket);
-    var o = this.pendingSockets[key];
-    if (o != undefined) {
-        delete this.pendingSockets[key];
-        found = true;
-    }
-    return found;
-}
-
-RelayServer.prototype.processPending = function (socket) {
-    var processed = false;
-    
-    var key = Object.keys(this.pendingSockets)[0];
-    var o = this.pendingSockets[key];
-    if (o != undefined) {
-        this.addSocketPair(socket, o.socket);
-        console.info("processing pending client...")
-        if (o.buffers.length > 0) {
-            for (var i = 0; i < o.buffers.length; i++) {
-                socket.write(o.buffers[i]);
-            }
-        }
-        delete this.pendingSockets[key];
-        processed = true;
-    }
-    return processed;
-}
-
-RelayServer.prototype.createRelayClientListener = function (port) {
-    var relayServer = this;
-
-    var relay = net.createServer(function (socket) {
-        
-        if (!relayServer.processPending(socket)) {
-            console.info("adding to available relay sockets");
-            relayServer.addAvailableSocket(socket);                        
-        }
-        
-        socket.on("data", function (data) {
-            var clientSocket = relayServer.getSocketPair(socket);
-            if (clientSocket == undefined) {
-                console.info("client socket not found, discarding data");
-                return;
-            }
-            try {
-                clientSocket.write(data);
-            } catch (ex) {
-                console.info(ex);
-            }
-        });
-        
-        socket.on("close", function (had_error) {
-            console.info("relay socket closed");
-
-            if (relayServer.removeFromAvailableSockets(socket)) {
-                console.info("  removed from available relay sockets");
-            } else {
-                var clientSocket = relayServer.getSocketPair(socket);
-                relayServer.deleteSocketPair(socket);
-                if (clientSocket == undefined) {
-                    console.info("  client socket not found");
-                } else {
-                    relayServer.deleteSocketPair(clientSocket);
-                    console.info("  ending client socket");
-                    clientSocket.destroy();
-                }
-            }
-        });
-
-        socket.on("error", function(e) {
-            console.log("relay socket error");
-            console.log(e);
-        });
+    var server = this;
+    this.relayListener.on("newClient", function (client) {
+        server.internetListener.pair(server.relayListener, client);
     });
-    relay.listen(port);
-    return relay;
-}
-
-RelayServer.prototype.createInternetClientListener = function (port) {
-    var relayServer = this;
-
-    var server = net.createServer(function (socket) {
-        
-        console.info("client connected");
-        
-        var relaySocket = relayServer.nextAvailableSocket();
-        if (relaySocket) {
-            relayServer.addSocketPair(socket, relaySocket);
-        } else {
-            console.info("  no available relay socket, buffering...");
-        }
-
-        socket.on("data", function (data) {
-            var relaySocket = relayServer.getSocketPair(socket);
-            if (relaySocket == undefined) {
-                relayServer.appendToPendingSocket(socket, data);
-                return;
-            }
-            try {
-                relaySocket.write(data);
-            } catch (ex) {
-                console.info(ex);
-            }
-        });
-        
-        socket.on("close", function (had_error) {
-            console.info("client socket closed");
-
-            var relaySocket = relayServer.getSocketPair(socket);
-            relayServer.deleteSocketPair(socket);            
-            if (relaySocket == undefined) {
-                console.info("  relay socket not found");
-                if (relayServer.deletePendingSocket(socket)) {
-                    console.info("  pending client socket removed");
-                }
-            } else {
-                relayServer.deleteSocketPair(relaySocket);
-                console.info("  ending relay socket");
-                relaySocket.destroy();
-            }
-        });
-
-        socket.on("error", function(e) {
-            console.log("client socket error");
-            console.log(e);
-        });
+    this.internetListener.on("newClient", function (client) {
+        server.relayListener.pair(server.internetListener, client);
     });
-    server.listen(port);
-    return server;
 }
 
 RelayServer.prototype.end = function() {
-    console.log("Terminating relay server")
-    this.relay.close();
+    this.relayListener.close();
+    this.internetListener.close();
+}
+
+util.inherits(Listener, EventEmitter);
+
+function Listener(port, options) {
+    this.port = port;
+    this.options = options || {};
+    this.pending = new Array();
+    this.active = new Array();
+
+    var listener = this;
+    this.server = net.createServer(function (socket) {
+        var client = new Client(socket, {
+            bufferData: listener.options.bufferData
+        });
+        client.on("close", function() {
+            var i = listener.pending.indexOf(client);
+            if (i != -1)
+                listener.pending.splice(i, 1);
+        });
+        listener.emit("newClient", client);
+    }).listen(port);
+}
+
+Listener.prototype.close = function() {
+    for(var i = 0; i < this.pending.length; i++) {
+        var client = this.pending[i];
+        client.socket.destroy();
+    }
+    for (var i = 0; i < this.active.length; i++) {
+        var client = this.active[i];
+        client.socket.destroy();
+    }
     this.server.close();
-    for (var key in this.socketPair) {
-        this.socketPair[key].destroy();
-    }
-    for (var key in this.availableSockets) {
-        this.availableSockets[key].destroy();
-    }
-    for (var key in this.pendingSockets) {
-        this.pendingSockets[key].destroy();
+}
+
+Listener.prototype.pair = function (other, client) {
+    if (this.pending.length > 0) {
+        var thisClient = this.pending[0];
+        this.pending.splice(0, 1);
+        client.pairedSocket = thisClient.socket;
+        thisClient.pairedSocket = client.socket;
+        this.active[this.active.length] = thisClient;
+        other.active[other.active.length] = client;
+        client.writeBufferedData();
+        thisClient.writeBufferedData();
+    } else {
+        other.pending.push(client);
     }
 }
 
-exports.createRelayServer = function (relayPort, internetPort) {
-    return new RelayServer(relayPort, internetPort);
+util.inherits(Client, EventEmitter);
+
+function Client(socket, options) {
+    this.socket = socket;
+    this.options = options || {};
+    this.pairedSocket = undefined;
+    
+    if (options.bufferData) {
+        this.buffer = new Array();
+    }
+
+    var client = this;    
+    socket.on("data", function (data) {
+        if (client.options.bufferData) {
+            client.buffer[client.buffer.length] = data;
+            return;
+        }
+        try {
+            client.pairedSocket.write(data);
+        } catch (ex) {
+        }
+    });    
+    socket.on("close", function (had_error) {
+        if (client.pairedSocket != undefined) {
+            client.pairedSocket.destroy();
+        }
+        client.emit("close");
+    });
+}
+
+Client.prototype.writeBufferedData = function() {
+    if (this.options.bufferData && this.buffer.length > 0) {
+        try {
+            for (var i = 0; i < this.buffer.length; i++) {
+                this.pairedSocket.write(this.buffer[i]);
+            }
+        } catch (ex) {
+        }
+    }
+    this.options.bufferData = false;
 }

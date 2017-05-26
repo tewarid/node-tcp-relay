@@ -1,9 +1,11 @@
-
+var util = require("util");
+var EventEmitter = require("events").EventEmitter;
 var net = require("net");
 
-function uniqueKey(socket) {
-    var key = socket.localAddress + ':' + socket.localPort;
-    return key;
+module.exports = {
+    createRelayClient: function createRelayClient(host, port, relayHost, relayPort, numConn) {
+        return new RelayClient(host, port, relayHost, relayPort, numConn);
+    }
 }
 
 function RelayClient(host, port, relayHost, relayPort, numConn) {
@@ -12,110 +14,81 @@ function RelayClient(host, port, relayHost, relayPort, numConn) {
     this.relayHost = relayHost;
     this.relayPort = relayPort;
     this.numConn = numConn;
-    this.relaySockets = {};
+    this.clients = new Array();
 
     if (this.numConn == undefined) {
         this.numConn = 1;
     }
 
     for (var i = 0; i < this.numConn; i++) {
-        this.newSocket();
+        this.clients[this.clients.length] = this.newClient(host, port, relayHost, relayPort);
+    }    
+}
+
+RelayClient.prototype.newClient = function(host, port, relayHost, relayPort) {
+    var relayClient = this;
+    var client = new Client(host, port, relayHost, relayPort);
+    client.on("inUse", function() {
+        relayClient.clients[relayClient.clients.length] = 
+            relayClient.newClient(host, port, relayHost, relayPort);
+    });
+    return client;
+}
+
+RelayClient.prototype.end = function () {
+    for (var i = 0; i < this.clients.length; i++) {
+        this.clients[i].relaySocket.end();
     }
 }
 
-RelayClient.prototype.newSocket = function () {
-    var relayClient = this;
+util.inherits(Client, EventEmitter);
 
-    var socket = undefined;
-    var connected = false;
-    var buffers = new Array();
-
-    var relaySocket = new net.Socket();
+function Client(host, port, relayHost, relayPort) {
+    this.serviceSocket = undefined;
+    this.bufferData = true;
+    this.buffer = new Array();
     
-    relaySocket.connect(relayClient.relayPort, relayClient.relayHost, 
-    function () {
-        console.log("relay socket established");
-
-        relayClient.relaySockets[uniqueKey(relaySocket)] = relaySocket;
-
-        relaySocket.on("data", function (data) {
-            if (socket == undefined) {
-                buffers[buffers.length] = data;
-
-                socket = new net.Socket();
-                socket.connect(relayClient.port, relayClient.host, 
-                function () {
-                    console.log("service socket established");
-
-                    connected = true;
-                    if (buffers.length > 0) {
-                        for (var i = 0; i < buffers.length; i++) {
-                            socket.write(buffers[i]);
-                        }
-                        buffers == undefined;
-                    }
-
-                    socket.on("data", function (data) {
-                        try {
-                            relaySocket.write(data);
-                        } catch (ex) {
-                            console.log(ex);
-                        }
-                    });
-
-                    socket.on("close", function (had_error) {
-                        console.log("service socket closed");
-                        console.log(had_error);
-                        socket == undefined;
-                        console.log("  ending relay socket");
-                        relaySocket.destroy();
-                    });
-                });
-
-                socket.on("error", function (e) {
-                    console.log("service socket error");
-                    console.log(e);
-                    console.log("  ending relay socket");
-                    relaySocket.destroy();
-                });
-
-                relayClient.newSocket();
-                console.log("next relay socket established");
-
+    var client = this;
+    client.relaySocket = new net.Socket();
+    client.relaySocket.connect(relayPort, relayHost, function () {
+        client.relaySocket.on("data", function (data) {
+            if (client.serviceSocket == undefined) {
+                client.emit("inUse");
+                client.createServiceSocket(host, port);
+            }
+            if (client.bufferData) {
+                client.buffer[client.buffer.length] = data;
             } else {
-                if (!connected) {
-                    buffers[buffers.length] = data;
-                } else {
-                    try {
-                        socket.write(data);
-                    } catch (ex) {
-                        console.log(ex);
-                    }
-                }
+                client.serviceSocket.write(data);
             }
         });
-
-        relaySocket.on("close", function (had_error) {
-            console.log("relay socket closed");
-            delete relayClient.relaySockets[uniqueKey(relaySocket)];
-            if (socket != undefined)
-                socket.destroy();
-        });
-
-        relaySocket.on("error", function(e) {
-            console.log("relay socket error");
-            console.log(e);
+        client.relaySocket.on("close", function (had_error) {
+            if (client.serviceSocket != undefined) {
+                client.serviceSocket.destroy();
+            }
         });
     });
 }
 
-RelayClient.prototype.end = function () {
-    console.log("Terminating relay client");
-    for (var key in this.relaySockets) {
-        this.relaySockets[key].end();
-    }
-}
-
-exports.createRelayClient = function createRelayClient(host, port, relayHost, relayPort, numConn) {
-    return new RelayClient(host, port, relayHost, relayPort, numConn);
+Client.prototype.createServiceSocket = function (host, port) {
+    var client = this;
+    client.serviceSocket = new net.Socket();
+    client.serviceSocket.connect(port, host, function () {
+        client.bufferData = false;
+        if (client.buffer.length > 0) {
+            for (var i = 0; i < client.buffer.length; i++) {
+                client.serviceSocket.write(client.buffer[i]);
+            }
+            client.buffer.length = 0;
+        }
+        client.serviceSocket.on("data", function (data) {
+            try {
+                client.relaySocket.write(data);
+            } catch (ex) {
+            }
+        });
+    });
+    client.serviceSocket.on("error", function (had_error) {
+        client.relaySocket.end();
+    });
 }
