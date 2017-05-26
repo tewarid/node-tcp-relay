@@ -14,7 +14,7 @@ var relayServer = require("./relay-server.js");
 var newRelayServer = relayServer.createRelayServer(argv.relayPort, argv.servicePort, options);
 
 process.on("uncaughtException", function (err) {
-    console.info(err);
+    console.log(err);
 });
 
 process.on("SIGINT", function() {

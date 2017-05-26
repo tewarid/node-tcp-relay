@@ -45,8 +45,13 @@ function Listener(port, options) {
         });
         client.on("close", function() {
             var i = listener.pending.indexOf(client);
-            if (i != -1)
+            if (i != -1) {
                 listener.pending.splice(i, 1);
+            } else {
+                i = listener.active.indexOf(client);
+                if (i != -1)
+                    listener.active.splice(i, 1);
+            }
         });
         listener.emit("newClient", client);
     }).listen(port);
