@@ -17,10 +17,10 @@ function RelayServer(relayPort, internetPort, options) {
     this.internetListener = new Listener(internetPort, {bufferData: true});
 
     var server = this;
-    this.relayListener.on("newClient", function (client) {
+    this.relayListener.on("new", function (client) {
         server.internetListener.pair(server.relayListener, client);
     });
-    this.internetListener.on("newClient", function (client) {
+    this.internetListener.on("new", function (client) {
         server.relayListener.pair(server.internetListener, client);
     });
 }
@@ -53,7 +53,7 @@ function Listener(port, options) {
                     listener.active.splice(i, 1);
             }
         });
-        listener.emit("newClient", client);
+        listener.emit("new", client);
     }).listen(port);
 }
 
@@ -91,12 +91,17 @@ function Client(socket, options) {
     this.options = options || {};
     this.pairedSocket = undefined;
     
-    if (options.bufferData) {
-        this.buffer = new Array();
+    var client = this;
+    if (client.options.bufferData) {
+        client.buffer = new Array();
+        setTimeout(function () {
+            if (options.bufferData && !client.pairedSocket) {
+                client.socket.destroy();
+                client.emit("close");
+            }
+        }, 20000);
     }
-
-    var client = this;    
-    socket.on("data", function (data) {
+    client.socket.on("data", function (data) {
         if (client.options.bufferData) {
             client.buffer[client.buffer.length] = data;
             return;
