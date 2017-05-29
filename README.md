@@ -17,9 +17,7 @@ tcprelays --relayPort 10080 --servicePort 10081 [--secret key] [--tls] [--pfx fi
 
 `relayPort` is the port where the relay server will listen for incoming connections from the relay client. `servicePort` is the port where external clients can connect to the service exposed through the relay.
 
-Use `secret` option to specify a shared secret key used to authorize relay client.
-
-Use `tls` option to enable TLS with relay client. Use `pfx` option to specify PFX file containing private key of server. Use `passphrase` to specify password used to protect private key.
+`secret` specifies a shared secret key used to authorize relay client. `tls` option enables secure communication with relay client using TLS. `pfx` option specifies a private key file used to establish TLS. `passphrase` specifies password used to protect private key.
 
 The relay client script is meant to be executed on a machine behind a NAT as follows
 
@@ -27,13 +25,13 @@ The relay client script is meant to be executed on a machine behind a NAT as fol
 tcprelayc --host host --port 10080 --relayHost host --relayPort port [--numConn count] [--secret key] [--tls]
 ```
 
-`host` is any server visible to the machine behind the NAT, it can also be `localhost`. `port` is the port of the service you want to expose through the relay.
+`host` is any server visible to the machine behind the NAT. `port` is the port of the service you want to expose through the relay.
 
 `relayServer` is the host or IP address of the server visible on the internet executing the relay server script. `relayPort` is the port where this script will connect with relay server.
 
-`numConn` is the number of unused connections relay client maintains with the relay server. As soon as it detects data activity on a socket, relay client establishes another connection.
+`numConn` is the number of unused connections relay client maintains with the server. As soon as it detects data activity on a socket, it establishes another connection.
 
-Use `secret` option to specify a shared secret key used to authorize relay client. Use `tls` option to enable secure communication with relay server, using TLS.
+`secret` specifies a shared secret key relay client sends to server for the purpose of authorization. `tls` enables secure TLS communication with server.
 
 If you're relaying HTTP(S), use a reverse proxy such as http-proxy, between the relay client and the local service e.g.
 ```javascript
