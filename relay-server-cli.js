@@ -1,12 +1,20 @@
 #!/usr/bin/env node
 var argv = require("optimist")
-    .usage('Usage: $0 --relayPort [port] --servicePort [port] [--auth]')
+    .usage('Usage: $0 --relayPort [port] --servicePort [port] [--secret [key]] [--tls] [--pfx [cert]] [--passphrase [passphrase]]')
     .demand(['relayPort', 'servicePort'])
-    .boolean('auth')
+    .string('secret')
+    .default('tls', false)
+    .string('pfx')
+    .default('pfx', 'cert.pfx')
+    .string('passphrase')
+    .default('passphrase', 'abcd')
     .argv;
 
 var options = {
-	auth: argv.auth
+    secret: argv.secret,
+	tls: argv.tls,
+    pfx: argv.pfx,
+    passphrase: argv.passphrase
 };
 
 var relayServer = require("./relay-server.js");
