@@ -123,15 +123,13 @@ util.inherits(Client, EventEmitter);
 function Client(socket, options) {
     this.socket = socket;
     this.options = options || {};
+    if (options.bufferData) {
+        this.buffer = new Array();
+    }
     this.pairedSocket = undefined;
+    this.timeout();
 
     var client = this;
-    if (client.options.timeout) {
-        client.timeout();
-    }
-    if (client.options.bufferData) {
-        client.buffer = new Array();
-    }
     client.socket.on("data", function (data) {
         if (client.options.bufferData) {
             client.buffer[client.buffer.length] = data;
@@ -153,6 +151,9 @@ function Client(socket, options) {
 
 Client.prototype.timeout = function() {
     var client = this;
+    if (!client.options.timeout) {
+        return;
+    }
     setTimeout(function () {
         if (client.options.bufferData) {
             client.socket.destroy();
