@@ -16,6 +16,7 @@ function RelayServer(relayPort, internetPort, options) {
     this.relayPort = relayPort;
     this.internetPort = internetPort;
     this.relayListener = new Listener(relayPort, {
+        hostname: options.hostname,
         secret: options.secret,
         bufferData: options.secret ? true : false,
         tls: options.tls,
@@ -23,6 +24,7 @@ function RelayServer(relayPort, internetPort, options) {
         passphrase: options.passphrase
     });
     this.internetListener = new Listener(internetPort, {
+        hostname: options.hostname,
         bufferData: true,
         timeout: 20000
     });
@@ -57,11 +59,11 @@ function Listener(port, options) {
         };
         this.server = tls.createServer(tlsOptions, function(socket) {
             listener.createClient(socket);
-        }).listen(port);
+        }).listen(port, options.hostname);
     } else {
         this.server = net.createServer(function(socket) {
             listener.createClient(socket);
-        }).listen(port);
+        }).listen(port, options.hostname);
     }
 }
 
@@ -92,6 +94,7 @@ Listener.prototype.createClient = function (socket) {
 }
 
 Listener.prototype.end = function() {
+    this.server.close();
     for(var i = 0; i < this.pending.length; i++) {
         var client = this.pending[i];
         client.socket.destroy();
@@ -100,7 +103,7 @@ Listener.prototype.end = function() {
         var client = this.active[i];
         client.socket.destroy();
     }
-    this.server.close();
+    this.server.unref();
 }
 
 Listener.prototype.pair = function (other, client) {

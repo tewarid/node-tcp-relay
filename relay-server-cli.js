@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 var argv = require("optimist")
-    .usage('Usage: $0 --relayPort [port] --servicePort [port] [--secret [key]] [--tls] [--pfx [file]] [--passphrase [passphrase]]')
+    .usage('Usage: $0 --relayPort [port] --servicePort [port] [--hostname [IP]] [--secret [key]] [--tls] [--pfx [file]] [--passphrase [passphrase]]')
     .demand(['relayPort', 'servicePort'])
     .string('secret')
     .default('tls', false)
@@ -11,6 +11,7 @@ var argv = require("optimist")
     .argv;
 
 var options = {
+    hostname: argv.hostname,
     secret: argv.secret,
 	tls: argv.tls,
     pfx: argv.pfx,

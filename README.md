@@ -12,10 +12,10 @@ sudo npm install -g node-tcp-relay
 The relay server script is meant to be executed on a server visible on the internet as follows
 
 ```bash
-tcprelays --relayPort 10080 --servicePort 10081 [--secret key] [--tls] [--pfx file] [--passphrase passphrase]
+tcprelays --relayPort 10080 --servicePort 10081 [--hostname [IP]] [--secret key] [--tls] [--pfx file] [--passphrase passphrase]
 ```
 
-`relayPort` is the port where the relay server will listen for incoming connections from the relay client. `servicePort` is the port where external clients can connect to the service exposed through the relay.
+`relayPort` is the port where the relay server will listen for incoming connections from the relay client. `servicePort` is the port where external clients can connect to the service exposed through the relay. Optionally, `hostname` specifies the IP address to listen at. Node.js listens on unspecified IPv6 address `::` by default.
 
 `secret` specifies a shared secret key used to authorize relay client. `tls` option enables secure communication with relay client using TLS. `pfx` option specifies a private key file used to establish TLS. `passphrase` specifies password used to protect private key.
 
