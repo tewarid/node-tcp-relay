@@ -68,7 +68,7 @@ function Client(host, port, relayHost, relayPort, options) {
     var client = this;
     if (client.options.tls) {
         client.relaySocket = tls.connect(relayPort, relayHost, {
-            rejectUnauthorized: false
+            rejectUnauthorized: client.options.rejectUnauthorized
         }, function () {
             client.authorize();
         });

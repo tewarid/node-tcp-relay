@@ -22,7 +22,7 @@ tcprelays --relayPort 10080 --servicePort 10081 [--hostname [IP]] [--secret key]
 The relay client script is meant to be executed on a machine behind a NAT as follows
 
 ```bash
-tcprelayc --host host --port 10080 --relayHost host --relayPort port [--numConn count] [--secret key] [--tls]
+tcprelayc --host host --port 10080 --relayHost host --relayPort port [--numConn count] [--secret key] [--tls] [--rejectUnauthorized]
 ```
 
 `host` is any server visible to the machine behind the NAT. `port` is the port of the service you want to expose through the relay.
@@ -31,7 +31,7 @@ tcprelayc --host host --port 10080 --relayHost host --relayPort port [--numConn 
 
 `numConn` is the number of unused connections relay client maintains with the server. As soon as it detects data activity on a socket, it establishes another connection.
 
-`secret` specifies a shared secret key relay client sends to server for the purpose of authorization. `tls` enables secure TLS communication with server.
+`secret` specifies a shared secret key relay client sends to server for the purpose of authorization. `tls` enables secure TLS communication with server. `rejectUnauthorized` enables checking for valid server certificate.
 
 If you're relaying HTTP(S), use a reverse proxy such as http-proxy, between the relay client and the local service e.g.
 ```javascript
