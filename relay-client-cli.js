@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 var argv = require("optimist")
-    .usage('Usage: $0 --host [host] --port [port] --relayHost [host] --relayPort [port] [--numConn [count]] [--secret [key]] [--tls] [--rejectUnauthorized]')
+    .usage("Usage: $0 --host [host] --port [port] --relayHost [host]"
+    + " --relayPort [port] [--numConn [count]] [--secret [key]] [--tls]"
+    + " [--rejectUnauthorized]")
     .demand(['host', 'port', 'relayHost', 'relayPort'])
     .default('numConn', 1)
     .default('tls', false)
@@ -14,12 +16,12 @@ var options = {
     rejectUnauthorized: argv.rejectUnauthorized
 };
 
-var relayClient = require("./relay-client.js")
+var relayClient = require("./relay-client.js");
 
-var newRelayClient = relayClient.createRelayClient(argv.host, argv.port, 
+var newRelayClient = relayClient.createRelayClient(argv.host, argv.port,
     argv.relayHost, argv.relayPort, options);
 
-process.on("uncaughtException", function (err) {
+process.on("uncaughtException", function(err) {
     console.log(err);
 });
 
