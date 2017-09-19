@@ -66,3 +66,8 @@ End relay client
 ```javascript
 newRelayClient.end();
 ```
+
+## Alternatives
+
+* ssh -R
+* VPN
