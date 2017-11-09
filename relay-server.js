@@ -19,7 +19,7 @@ function RelayServer(relayPort, internetPort, options) {
         secret: options.secret,
         bufferData: options.secret ? true : false,
         tls: options.tls,
-        pfx: options.pfx ? fs.readFileSync(options.pfx) : undefined,
+        pfx: options.pfx,
         passphrase: options.passphrase
     });
     this.internetListener = new Listener(internetPort, {
@@ -51,9 +51,9 @@ function Listener(port, options) {
     this.active = [];
 
     var listener = this;
-    if (listener.options.tls) {
+    if (listener.options.tls === true) {
         var tlsOptions = {
-            pfx: listener.options.pfx,
+            pfx: fs.readFileSync(listener.options.pfx),
             passphrase: listener.options.passphrase
         };
         this.server = tls.createServer(tlsOptions, function(socket) {
