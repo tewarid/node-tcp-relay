@@ -6,6 +6,13 @@ var fs = require('fs');
 
 module.exports = {
     createRelayServer: function(relayPort, internetPort, options) {
+        if (options === undefined) {
+            options = {
+                tls: false,
+                pfx: "cert.pfx",
+                passphrase: "abcd"
+            };
+        }
         return new RelayServer(relayPort, internetPort, options);
     }
 };
@@ -58,12 +65,13 @@ function Listener(port, options) {
         };
         this.server = tls.createServer(tlsOptions, function(socket) {
             listener.createClient(socket);
-        }).listen(port, options.hostname);
+        });
     } else {
         this.server = net.createServer(function(socket) {
             listener.createClient(socket);
-        }).listen(port, options.hostname);
+        });
     }
+    this.server.listen(port, options.hostname);
 }
 
 Listener.prototype.createClient = function(socket) {
