@@ -1,4 +1,4 @@
-# node-tcp-relay [![Codacy Badge](https://api.codacy.com/project/badge/Grade/afcfc0a48b6b408c9c193fb72776c831)](https://www.codacy.com/app/tewarid/node-tcp-relay?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tewarid/node-tcp-relay&amp;utm_campaign=Badge_Grade)
+# node-tcp-relay [![Codacy Badge](https://api.codacy.com/project/badge/Grade/afcfc0a48b6b408c9c193fb72776c831)](https://www.codacy.com/app/tewarid/node-tcp-relay?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tewarid/node-tcp-relay&amp;utm_campaign=Badge_Grade) [![Maintainability](https://api.codeclimate.com/v1/badges/4e63f2f80369103db673/maintainability)](https://codeclimate.com/github/tewarid/node-tcp-relay/maintainability)
 
 This TCP relay/reverse proxy can be used to expose any TCP/IP service running behind a NAT. This includes services that use HTTP and SSH.
 
