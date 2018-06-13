@@ -7,7 +7,9 @@ module.exports = {
     createRelayClient: function createRelayClient(host, port, relayHost,
     relayPort, numConn) {
         return new RelayClient(host, port, relayHost, relayPort, numConn);
-    }
+    },
+    RelayClient: RelayClient,
+    Client: Client
 };
 
 function RelayClient(host, port, relayHost, relayPort, options) {
@@ -30,9 +32,10 @@ function RelayClient(host, port, relayHost, relayPort, options) {
 }
 
 RelayClient.prototype.createClient = function(host, port, relayHost,
-relayPort, options) {
+relayPort, options, ClientClass) {
+    ClientClass = ClientClass || Client;
     var relayClient = this;
-    var client = new Client(host, port, relayHost, relayPort, options);
+    var client = new ClientClass(host, port, relayHost, relayPort, options);
     client.on("pair", function() {
         relayClient.clients[relayClient.clients.length] =
             relayClient.createClient(host, port, relayHost, relayPort, options);
