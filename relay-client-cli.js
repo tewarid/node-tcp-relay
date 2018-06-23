@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 var argv = require("optimist")
     .usage("Usage: $0 --host [host] --port [port] --relayHost [host]"
-    + " --relayPort [port] [--numConn [count]] [--secret [key]] [--tls]"
+    + " --relayPort [port] [--numConn [count]] [--secret [key]] [--tls [both]]"
     + " [--rejectUnauthorized]")
-    .demand(['host', 'port', 'relayHost', 'relayPort'])
-    .default('numConn', 1)
-    .default('tls', false)
-    .default('rejectUnauthorized', false)
+    .demand(["host", "port", "relayHost", "relayPort"])
+    .default("numConn", 1)
+    .default("tls", false)
+    .default("rejectUnauthorized", false)
     .argv;
 
 var options = {

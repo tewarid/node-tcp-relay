@@ -12,17 +12,17 @@ sudo npm install -g node-tcp-relay
 The relay server is meant to be executed on a server visible on the internet, as follows
 
 ```bash
-tcprelays --relayPort 10080 --servicePort 10081 [--hostname [IP]] [--secret key] [--tls] [--pfx file] [--passphrase passphrase]
+tcprelays --relayPort 10080 --servicePort 10081 [--hostname [IP]] [--secret key] [--tls [both]] [--pfx file] [--passphrase passphrase]
 ```
 
 `relayPort` is the port where the relay server will listen for incoming connections from the relay client. `servicePort` is the port where internet clients can connect to the service exposed through the relay. Optionally, `hostname` specifies the IP address to listen at. Node.js listens on unspecified IPv6 address `::` by default.
 
-`secret` specifies a shared secret key used to authorize relay client. `tls` option enables secure communication with relay client using TLS. `pfx` option specifies a private key file used to establish TLS. `passphrase` specifies password used to protect private key.
+`secret` specifies a shared secret key used to authorize relay client. `tls` option enables secure communication with relay client using TLS. If followed by `both`, TLS is also enabled on the service port. `pfx` option specifies a private key file used to establish TLS. `passphrase` specifies password used to protect private key.
 
 The relay client is meant to be executed on a machine behind a NAT, as follows
 
 ```bash
-tcprelayc --host host --port 10080 --relayHost host --relayPort port [--numConn count] [--secret key] [--tls] [--rejectUnauthorized]
+tcprelayc --host host --port 10080 --relayHost host --relayPort port [--numConn count] [--secret key] [--tls [both]] [--rejectUnauthorized]
 ```
 
 `host` is any server visible to the machine behind the NAT. `port` is the port of the service you want to expose through the relay.
@@ -31,7 +31,7 @@ tcprelayc --host host --port 10080 --relayHost host --relayPort port [--numConn 
 
 `numConn` is the number of unused connections relay client maintains with the server. As soon as it detects data activity on a socket, it establishes another connection. Servicing internet clients that don't transfer any data may lead to denial of service.
 
-`secret` specifies a shared secret key relay client sends to server for the purpose of authorization. `tls` enables secure TLS communication with server. `rejectUnauthorized` enables checking for valid server certificate.
+`secret` specifies a shared secret key relay client sends to server for the purpose of authorization. `tls` enables secure TLS communication with relay server. If followed by `both`, TLS is also used with server behind the NAT. `rejectUnauthorized` enables checking for valid server certificate.
 
 If you're relaying HTTP(S), use a reverse proxy such as http-proxy, between the relay client and the local service e.g.
 ```javascript
@@ -51,7 +51,7 @@ var newRelayServer = relayServer.createRelayServer(10080, 10081);
 End relay server
 
 ```javascript
-newRelayServer.end();    
+newRelayServer.end();
 ```
 
 Create and start a relay client thus

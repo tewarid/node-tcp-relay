@@ -111,16 +111,18 @@ Client.prototype.authorize = function() {
 
 Client.prototype.createServiceSocket = function(host, port) {
     var client = this;
-    client.serviceSocket = new net.Socket();
-    client.serviceSocket.connect(port, host, function() {
-        client.bufferData = false;
-        if (client.buffer.length > 0) {
-            for (var i = 0; i < client.buffer.length; i++) {
-                client.serviceSocket.write(client.buffer[i]);
-            }
-            client.buffer.length = 0;
-        }
-    });
+    if (client.options.tls === "both") {
+        client.serviceSocket = tls.connect(port, host, {
+            rejectUnauthorized: client.options.rejectUnauthorized
+        }, function() {
+            client.writeBuffer();
+        });
+    } else {
+        client.serviceSocket = new net.Socket();
+        client.serviceSocket.connect(port, host, function() {
+            client.writeBuffer();
+        });
+    }
     client.serviceSocket.on("data", function(data) {
         try {
             client.relaySocket.write(data);
@@ -130,4 +132,15 @@ Client.prototype.createServiceSocket = function(host, port) {
     client.serviceSocket.on("error", function(hadError) {
         client.relaySocket.end();
     });
+};
+
+Client.prototype.writeBuffer = function() {
+    var client = this;
+    client.bufferData = false;
+    if (client.buffer.length > 0) {
+        for (var i = 0; i < client.buffer.length; i++) {
+            client.serviceSocket.write(client.buffer[i]);
+        }
+        client.buffer.length = 0;
+    }
 };

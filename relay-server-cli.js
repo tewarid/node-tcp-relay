@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 var argv = require("optimist")
     .usage("Usage: $0 --relayPort [port] --servicePort [port]"
-    + " [--hostname [IP]] [--secret [key]] [--tls] [--pfx [file]]"
+    + " [--hostname [IP]] [--secret [key]] [--tls [both]] [--pfx [file]]"
     + " [--passphrase [passphrase]]")
     .demand(['relayPort', 'servicePort'])
     .string('secret')

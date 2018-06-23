@@ -25,14 +25,17 @@ function RelayServer(relayPort, internetPort, options) {
         hostname: options.hostname,
         secret: options.secret,
         bufferData: options.secret ? true : false,
-        tls: options.tls,
+        tls: options.tls !== false ? true : false,
         pfx: options.pfx,
         passphrase: options.passphrase
     });
     this.internetListener = new Listener(internetPort, {
         hostname: options.hostname,
         bufferData: true,
-        timeout: 20000
+        timeout: 20000,
+        tls: options.tls === "both" ? true : false,
+        pfx: options.pfx,
+        passphrase: options.passphrase
     });
 
     var server = this;
