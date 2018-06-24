@@ -1,16 +1,19 @@
 #!/usr/bin/env node
-var argv = require("optimist")
-    .usage("Usage: $0 --relayPort [port] --servicePort [port]"
-    + " [--hostname [IP]] [--secret [key]] [--tls [both]] [--pfx [file]]"
-    + " [--passphrase [passphrase]]")
-    .demand(['relayPort', 'servicePort'])
-    .string('secret')
-    .default('tls', false)
-    .string('pfx')
-    .default('pfx', 'cert.pfx')
-    .string('passphrase')
-    .default('passphrase', 'abcd')
-    .argv;
+var argv = require("commander");
+
+argv
+    .usage("[options]")
+    .version("0.0.15")
+    .option("-r, --relayPort <n>", "Relay port number", parseInt)
+    .option("-s, --servicePort <n>", "Internet port number", parseInt)
+    .option("-h, --hostname <host>", "Name or IP address of host")
+    .option("-k, --secret [key]",
+        "Secret key required to be sent by relay client")
+    .option("-t, --tls [both]", "Use TLS", false)
+    .option("-c, --pfx [file]", "Private key file", "cert.pfx")
+    .option("-p, --passphrase [value]",
+        "Passphrase to access private key file", "abcd")
+    .parse(process.argv);
 
 var options = {
     hostname: argv.hostname,

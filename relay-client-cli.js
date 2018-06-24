@@ -1,13 +1,20 @@
 #!/usr/bin/env node
-var argv = require("optimist")
-    .usage("Usage: $0 --host [host] --port [port] --relayHost [host]"
-    + " --relayPort [port] [--numConn [count]] [--secret [key]] [--tls [both]]"
-    + " [--rejectUnauthorized]")
-    .demand(["host", "port", "relayHost", "relayPort"])
-    .default("numConn", 1)
-    .default("tls", false)
-    .default("rejectUnauthorized", false)
-    .argv;
+var argv = require("commander");
+
+argv
+    .usage("[options]")
+    .version("0.0.15")
+    .option("-n, --host <host>", "Name or IP address of service host")
+    .option("-s, --port <n>", "Service port number", parseInt)
+    .option("-h, --relayHost <relayHost>", "Name or IP address of relay host")
+    .option("-r, --relayPort <n>", "Relay port number", parseInt)
+    .option("-c, --numConn [numConn]",
+        "Number of connections to maintain with relay", 1)
+    .option("-k, --secret [key]", "Secret key to send to relay host")
+    .option("-t, --tls [both]", "Use TLS", false)
+    .option("-u, --rejectUnauthorized [value]",
+        "Do not accept invalid certificate", false)
+    .parse(process.argv);
 
 var options = {
     numConn: argv.numConn,
