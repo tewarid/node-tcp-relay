@@ -161,6 +161,9 @@ function Client(socket, options) {
         }
         client.emit("close");
     });
+    socket.on("error", function(err) {
+      client.emit("close");
+    });
 }
 
 Client.prototype.timeout = function() {
