@@ -10,7 +10,8 @@ argv
     .option("-k, --secret [key]",
         "Secret key required to be sent by relay client")
     .option("-t, --tls [both]", "Use TLS", false)
-    .option("-c, --pfx [file]", "Private key file", "cert.pfx")
+    .option("-c, --pfx [file]", "Private key file",
+        require.resolve("./cert.pfx"))
     .option("-p, --passphrase [value]",
         "Passphrase to access private key file", "abcd")
     .parse(process.argv);
