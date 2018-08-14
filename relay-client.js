@@ -4,38 +4,41 @@ var net = require("net");
 var tls = require('tls');
 
 module.exports = {
-    createRelayClient: function createRelayClient(host, port, relayHost,
-    relayPort, numConn) {
-        return new RelayClient(host, port, relayHost, relayPort, numConn);
-    }
+    createRelayClient: createRelayClient
 };
 
-function RelayClient(host, port, relayHost, relayPort, options) {
-    this.host = host;
-    this.port = port;
-    this.relayHost = relayHost;
-    this.relayPort = relayPort;
-    if (typeof options === 'number') {
-        this.numConn = options;
+function createRelayClient(host, port, relayHost, relayPort, numConn) {
+    var options;
+    if (typeof numConn === "number") {
+        options = {};
+        options.numConn = numConn;
     } else {
-        this.numConn = options.numConn;
-        this.options = options;
+        options = Object.assign(numConn);
+        options.numConn = numConn.numConn;
     }
+    options.host = host;
+    options.port = port;
+    options.relayHost = relayHost;
+    options.relayPort = relayPort;
+    return new RelayClient(options);
+}
+
+function RelayClient(options) {
+    this.options = options;
     this.clients = [];
 
-    for (var i = 0; i < this.numConn; i++) {
+    for (var i = 0; i < this.options.numConn; i++) {
         this.clients[this.clients.length] =
-            this.createClient(host, port, relayHost, relayPort, options);
+            this.createClient(options);
     }
 }
 
-RelayClient.prototype.createClient = function(host, port, relayHost,
-relayPort, options) {
+RelayClient.prototype.createClient = function(options) {
     var relayClient = this;
-    var client = new Client(host, port, relayHost, relayPort, options);
+    var client = new Client(options);
     client.on("pair", function() {
         relayClient.clients[relayClient.clients.length] =
-            relayClient.createClient(host, port, relayHost, relayPort, options);
+            relayClient.createClient(options);
     });
     client.on("close", function() {
         var i = relayClient.clients.indexOf(client);
@@ -45,8 +48,7 @@ relayPort, options) {
         setTimeout(function() {
             if (relayClient.endCalled) return;
             relayClient.clients[relayClient.clients.length] =
-                relayClient.createClient(host, port, relayHost, relayPort,
-                options);
+                relayClient.createClient(options);
         }, 5000);
     });
     return client;
@@ -62,46 +64,64 @@ RelayClient.prototype.end = function() {
 
 util.inherits(Client, EventEmitter);
 
-function Client(host, port, relayHost, relayPort, options) {
+function Client(options) {
     this.options = options;
+    this.tlsOptions = {
+        rejectUnauthorized: options.rejectUnauthorized
+    };
     this.serviceSocket = undefined;
     this.bufferData = true;
     this.buffer = [];
 
     var client = this;
-    if (client.options.tls) {
-        client.relaySocket = tls.connect(relayPort, relayHost, {
-            rejectUnauthorized: client.options.rejectUnauthorized
-        }, function() {
-            client.authorize();
-        });
-    } else {
-        client.relaySocket = new net.Socket();
-        client.relaySocket.connect(relayPort, relayHost, function() {
-            client.authorize();
-        });
-    }
+    client.connect();
     client.relaySocket.on("data", function(data) {
-        if (client.serviceSocket == undefined) {
-            client.emit("pair");
-            client.createServiceSocket(host, port);
-        }
-        if (client.bufferData) {
-            client.buffer[client.buffer.length] = data;
-        } else {
-            client.serviceSocket.write(data);
-        }
+        client.receiveData(data);
     });
     client.relaySocket.on("close", function(hadError) {
-        if (client.serviceSocket != undefined) {
-            client.serviceSocket.destroy();
-        } else {
-            client.emit("close");
-        }
+        client.close();
     });
     client.relaySocket.on("error", function(error) {
     });
 }
+
+Client.prototype.connect = function() {
+    var client = this;
+    if (this.options.tls) {
+        this.relaySocket = tls.connect(this.options.relayPort,
+            this.options.relayHost, this.tlsOptions,
+            function() {
+                client.authorize();
+            });
+    } else {
+        this.relaySocket = new net.Socket();
+        this.relaySocket.connect(this.options.relayPort,
+            this.options.relayHost,
+            function() {
+                client.authorize();
+            });
+    }
+};
+
+Client.prototype.receiveData = function(data) {
+    if (this.serviceSocket == undefined) {
+        this.emit("pair");
+        this.createServiceSocket(this.options.host, this.options.port);
+    }
+    if (this.bufferData) {
+        this.buffer[this.buffer.length] = data;
+    } else {
+        this.serviceSocket.write(data);
+    }
+};
+
+Client.prototype.close = function() {
+    if (this.serviceSocket != undefined) {
+        this.serviceSocket.destroy();
+    } else {
+        this.emit("close");
+    }
+};
 
 Client.prototype.authorize = function() {
     if (this.options.secret) {
@@ -111,36 +131,34 @@ Client.prototype.authorize = function() {
 
 Client.prototype.createServiceSocket = function(host, port) {
     var client = this;
-    if (client.options.tls === "both") {
-        client.serviceSocket = tls.connect(port, host, {
-            rejectUnauthorized: client.options.rejectUnauthorized
-        }, function() {
-            client.writeBuffer();
-        });
+    if (this.options.tls === "both") {
+        this.serviceSocket = tls.connect(port, host, this.tlsOptions,
+            function() {
+                client.writeBuffer();
+            });
     } else {
-        client.serviceSocket = new net.Socket();
-        client.serviceSocket.connect(port, host, function() {
+        this.serviceSocket = new net.Socket();
+        this.serviceSocket.connect(port, host, function() {
             client.writeBuffer();
         });
     }
-    client.serviceSocket.on("data", function(data) {
+    this.serviceSocket.on("data", function(data) {
         try {
             client.relaySocket.write(data);
         } catch (ex) {
         }
     });
-    client.serviceSocket.on("error", function(hadError) {
+    this.serviceSocket.on("error", function(hadError) {
         client.relaySocket.end();
     });
 };
 
 Client.prototype.writeBuffer = function() {
-    var client = this;
-    client.bufferData = false;
-    if (client.buffer.length > 0) {
-        for (var i = 0; i < client.buffer.length; i++) {
-            client.serviceSocket.write(client.buffer[i]);
+    this.bufferData = false;
+    if (this.buffer.length > 0) {
+        for (var i = 0; i < this.buffer.length; i++) {
+            this.serviceSocket.write(this.buffer[i]);
         }
-        client.buffer.length = 0;
+        this.buffer.length = 0;
     }
 };
