@@ -67,7 +67,8 @@ function Listener(port, options) {
     if (listener.options.tls === true) {
         var tlsOptions = {
             pfx: fs.readFileSync(listener.options.pfx),
-            passphrase: listener.options.passphrase
+            passphrase: listener.options.passphrase,
+            secureProtocol: "TLSv1_2_method"
         };
         this.server = tls.createServer(tlsOptions, function(socket) {
             listener.createClient(socket);

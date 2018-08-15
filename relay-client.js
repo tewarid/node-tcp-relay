@@ -67,7 +67,8 @@ util.inherits(Client, EventEmitter);
 function Client(options) {
     this.options = options;
     this.tlsOptions = {
-        rejectUnauthorized: options.rejectUnauthorized
+        rejectUnauthorized: options.rejectUnauthorized,
+        secureProtocol: "TLSv1_2_method"
     };
     this.serviceSocket = undefined;
     this.bufferData = true;
