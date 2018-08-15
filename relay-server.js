@@ -89,7 +89,7 @@ Listener.prototype.createClient = function(socket) {
     });
     var listener = this;
     client.on("close", function() {
-        listener.handleClose();
+        listener.handleClose(client);
     });
     if (listener.options.secret) {
         client.on("authorized", function() {
@@ -100,12 +100,12 @@ Listener.prototype.createClient = function(socket) {
     }
 };
 
-Listener.prototype.handleClose = function() {
-    var i = this.pending.indexOf(this.client);
+Listener.prototype.handleClose = function(client) {
+    var i = this.pending.indexOf(client);
     if (i != -1) {
         this.pending.splice(i, 1);
     } else {
-        i = this.active.indexOf(this.client);
+        i = this.active.indexOf(client);
         if (i != -1) {
             this.active.splice(i, 1);
         }
