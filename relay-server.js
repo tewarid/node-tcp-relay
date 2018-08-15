@@ -32,21 +32,23 @@ function RelayServer(relayPort, internetPort, options) {
 }
 
 RelayServer.prototype.createListeners = function() {
+    this.relayTlsOptions = makeRelayTlsOptions(this.options);
     this.relayListener = new Listener(this.relayPort, {
         hostname: this.options.hostname,
-        secret: this.options.secret,
-        bufferData: this.options.secret ? true : false,
         tls: this.options.tls !== false ? true : false,
         pfx: this.options.pfx,
-        passphrase: this.options.passphrase
+        passphrase: this.options.passphrase,
+        tlsOptions: this.relayTlsOptions
     });
+    this.internetTlsOptions = makeInternetTlsOptions(this.options);
     this.internetListener = new Listener(this.internetPort, {
         hostname: this.options.hostname,
         bufferData: true,
         timeout: 20000,
         tls: this.options.tls === "both" ? true : false,
         pfx: this.options.pfx,
-        passphrase: this.options.passphrase
+        passphrase: this.options.passphrase,
+        tlsOptions: this.internetTlsOptions
     });
 };
 
@@ -62,14 +64,9 @@ function Listener(port, options) {
     this.options = options || {};
     this.pending = [];
     this.active = [];
-    this.tlsOptions = {
-        pfx: fs.readFileSync(options.pfx),
-        passphrase: options.passphrase,
-        secureProtocol: "TLSv1_2_method"
-    };
     var listener = this;
     if (options.tls === true) {
-        this.server = tls.createServer(this.tlsOptions, function(socket) {
+        this.server = tls.createServer(options.tlsOptions, function(socket) {
             listener.createClient(socket);
         });
     } else {
@@ -80,9 +77,32 @@ function Listener(port, options) {
     this.server.listen(port, options.hostname);
 }
 
+function makeRelayTlsOptions(options) {
+    var tlsOptions = {
+        pfx: fs.readFileSync(options.pfx),
+        passphrase: options.passphrase,
+        secureProtocol: "TLSv1_2_method"
+    };
+    if (options.auth) {
+        tlsOptions.requestCert = true;
+    }
+    if (options.caFile) {
+        tlsOptions.ca = fs.readFileSync(options.caFile);
+    }
+    return tlsOptions;
+}
+
+function makeInternetTlsOptions(options) {
+    var tlsOptions = {
+        pfx: fs.readFileSync(options.pfx),
+        passphrase: options.passphrase,
+        secureProtocol: "TLSv1_2_method"
+    };
+    return tlsOptions;
+}
+
 Listener.prototype.createClient = function(socket) {
     var client = new Client(socket, {
-        secret: this.options.secret,
         bufferData: this.options.bufferData,
         timeout: this.options.timeout
     });
@@ -90,13 +110,7 @@ Listener.prototype.createClient = function(socket) {
     client.on("close", function() {
         listener.handleClose(client);
     });
-    if (listener.options.secret) {
-        client.on("authorized", function() {
-            listener.emit("new", client);
-        });
-    } else {
-        listener.emit("new", client);
-    }
+    listener.emit("new", client);
 };
 
 Listener.prototype.handleClose = function(client) {
@@ -165,7 +179,6 @@ function Client(socket, options) {
 Client.prototype.receiveData = function(data) {
     if (this.options.bufferData) {
         this.buffer[this.buffer.length] = data;
-        this.authorize();
         return;
     }
     try {
@@ -192,21 +205,6 @@ Client.prototype.timeout = function() {
             client.emit("close");
         }
     }, client.options.timeout);
-};
-
-Client.prototype.authorize = function() {
-    var client = this;
-    if (client.options.secret) {
-        var keyLen = client.options.secret.length;
-        if (client.buffer[0].length >= keyLen
-            && client.buffer[0].toString(undefined, 0, keyLen)
-            === client.options.secret) {
-            client.buffer[0] = client.buffer[0].slice(keyLen);
-            client.emit("authorized");
-        } else {
-            client.socket.destroy();
-        }
-    }
 };
 
 Client.prototype.writeBuffer = function() {

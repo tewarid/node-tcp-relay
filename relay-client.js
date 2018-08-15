@@ -21,6 +21,8 @@ function createRelayClient(host, port, relayHost, relayPort, numConn) {
     options.port = port;
     options.relayHost = relayHost;
     options.relayPort = relayPort;
+    options.relayTlsOptions = makeRelayTlsOptions(options);
+    options.serviceTlsOptions = makeServiceTlsOptions(options);
     return new RelayClient(options);
 }
 
@@ -67,7 +69,6 @@ util.inherits(Client, EventEmitter);
 
 function Client(options) {
     this.options = options;
-    this.tlsOptions = makeTlsOptions(options);
     this.serviceSocket = undefined;
     this.bufferData = true;
     this.buffer = [];
@@ -84,10 +85,12 @@ function Client(options) {
     });
 }
 
-function makeTlsOptions(options) {
+function makeRelayTlsOptions(options) {
     var tlsOptions = {
         rejectUnauthorized: options.rejectUnauthorized,
-        secureProtocol: "TLSv1_2_method"
+        secureProtocol: "TLSv1_2_method",
+        pfx: fs.readFileSync(options.pfx),
+        passphrase: options.passphrase,
     };
     if (options.caFile) {
         tlsOptions.ca = fs.readFileSync(options.caFile);
@@ -95,11 +98,19 @@ function makeTlsOptions(options) {
     return tlsOptions;
 }
 
+function makeServiceTlsOptions(options) {
+    var tlsOptions = {
+        rejectUnauthorized: options.rejectUnauthorized,
+        secureProtocol: "TLSv1_2_method"
+    };
+    return tlsOptions;
+}
+
 Client.prototype.connect = function() {
     var client = this;
     if (this.options.tls) {
         this.relaySocket = tls.connect(this.options.relayPort,
-            this.options.relayHost, this.tlsOptions,
+            this.options.relayHost, this.options.relayTlsOptions,
             function() {
                 client.authorize();
             });
@@ -133,16 +144,11 @@ Client.prototype.close = function() {
     }
 };
 
-Client.prototype.authorize = function() {
-    if (this.options.secret) {
-        this.relaySocket.write(this.options.secret);
-    }
-};
-
 Client.prototype.createServiceSocket = function(host, port) {
     var client = this;
     if (this.options.tls === "both") {
-        this.serviceSocket = tls.connect(port, host, this.tlsOptions,
+        this.serviceSocket = tls.connect(port, host,
+            this.options.serviceTlsOptions,
             function() {
                 client.writeBuffer();
             });
