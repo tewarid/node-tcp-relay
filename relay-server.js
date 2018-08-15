@@ -62,15 +62,14 @@ function Listener(port, options) {
     this.options = options || {};
     this.pending = [];
     this.active = [];
-
+    this.tlsOptions = {
+        pfx: fs.readFileSync(options.pfx),
+        passphrase: options.passphrase,
+        secureProtocol: "TLSv1_2_method"
+    };
     var listener = this;
-    if (listener.options.tls === true) {
-        var tlsOptions = {
-            pfx: fs.readFileSync(listener.options.pfx),
-            passphrase: listener.options.passphrase,
-            secureProtocol: "TLSv1_2_method"
-        };
-        this.server = tls.createServer(tlsOptions, function(socket) {
+    if (options.tls === true) {
+        this.server = tls.createServer(this.tlsOptions, function(socket) {
             listener.createClient(socket);
         });
     } else {
