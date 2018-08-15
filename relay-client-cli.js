@@ -14,15 +14,17 @@ argv
     .option("-t, --tls [both]", "Use TLS", false)
     .option("-u, --rejectUnauthorized [value]",
         "Do not accept invalid certificate", false)
+    .option("-f, --caFile [value]", "CA certs file")
     .parse(process.argv);
 
 var options = {
     numConn: argv.numConn,
 	tls: argv.tls,
     secret: argv.secret,
-    rejectUnauthorized: argv.rejectUnauthorized === "true"
+    rejectUnauthorized: argv.rejectUnauthorized !== "false",
+    caFile: argv.caFile
 };
-
+console.log(options);
 var relayClient = require("./relay-client.js");
 
 var newRelayClient = relayClient.createRelayClient(argv.host, argv.port,

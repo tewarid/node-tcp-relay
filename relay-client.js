@@ -2,6 +2,7 @@ var util = require("util");
 var EventEmitter = require("events").EventEmitter;
 var net = require("net");
 var tls = require('tls');
+var fs = require('fs');
 
 module.exports = {
     createRelayClient: createRelayClient
@@ -66,10 +67,7 @@ util.inherits(Client, EventEmitter);
 
 function Client(options) {
     this.options = options;
-    this.tlsOptions = {
-        rejectUnauthorized: options.rejectUnauthorized,
-        secureProtocol: "TLSv1_2_method"
-    };
+    this.tlsOptions = makeTlsOptions(options);
     this.serviceSocket = undefined;
     this.bufferData = true;
     this.buffer = [];
@@ -84,6 +82,17 @@ function Client(options) {
     });
     client.relaySocket.on("error", function(error) {
     });
+}
+
+function makeTlsOptions(options) {
+    var tlsOptions = {
+        rejectUnauthorized: options.rejectUnauthorized,
+        secureProtocol: "TLSv1_2_method"
+    };
+    if (options.caFile) {
+        tlsOptions.ca = fs.readFileSync(options.caFile);
+    }
+    return tlsOptions;
 }
 
 Client.prototype.connect = function() {
