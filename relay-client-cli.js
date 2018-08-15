@@ -20,7 +20,7 @@ var options = {
     numConn: argv.numConn,
 	tls: argv.tls,
     secret: argv.secret,
-    rejectUnauthorized: argv.rejectUnauthorized
+    rejectUnauthorized: argv.rejectUnauthorized === "true"
 };
 
 var relayClient = require("./relay-client.js");
