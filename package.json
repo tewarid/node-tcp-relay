@@ -2,7 +2,7 @@
     "name": "node-tcp-relay",
     "description": "A simple TCP relay mechanism for NAT traversal built using Node.js",
     "license": "MIT",
-    "version": "0.0.17",
+    "version": "0.0.18",
     "main": "index.js",
     "repository": {
         "type": "git",
@@ -13,11 +13,11 @@
         "tcprelays": "./relay-server-cli.js"
     },
     "dependencies": {
-        "commander": "^2.15.1"
+        "commander": "^2.19.0"
     },
     "devDependencies": {
-        "eslint": "^4.0.0",
-        "eslint-config-google": "^0.8.0",
+        "eslint": "^4.19.1",
+        "eslint-config-google": "^0.8.1",
         "eslint-plugin-security": "^1.4.0"
     }
 }
