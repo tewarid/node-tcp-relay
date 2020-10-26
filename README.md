@@ -69,5 +69,5 @@ newRelayClient.end();
 
 ## Alternatives
 
-* ssh -R
+* [ssh -R](https://www.ssh.com/ssh/tunneling/example#remote-forwarding)
 * VPN
