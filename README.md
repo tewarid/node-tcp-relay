@@ -1,8 +1,9 @@
-# node-tcp-relay [![Build Status](https://semaphoreci.com/api/v1/tewarid/node-tcp-relay/branches/master/badge.svg)](https://semaphoreci.com/tewarid/node-tcp-relay) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/fdbbca1d689d4b13b5a22c5765f41c8e)](https://www.codacy.com/gh/tewarid/node-tcp-relay/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tewarid/node-tcp-relay&amp;utm_campaign=Badge_Grade) [![Maintainability](https://api.codeclimate.com/v1/badges/4e63f2f80369103db673/maintainability)](https://codeclimate.com/github/tewarid/node-tcp-relay/maintainability)
+# node-tcp-relay [![Codacy Badge](https://app.codacy.com/project/badge/Grade/fdbbca1d689d4b13b5a22c5765f41c8e)](https://www.codacy.com/gh/tewarid/node-tcp-relay/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tewarid/node-tcp-relay&amp;utm_campaign=Badge_Grade) [![Maintainability](https://api.codeclimate.com/v1/badges/4e63f2f80369103db673/maintainability)](https://codeclimate.com/github/tewarid/node-tcp-relay/maintainability)
 
 This TCP relay/reverse proxy can be used to expose any TCP/IP service running behind a NAT. This includes services that use HTTP and SSH.
 
 To install from  <a href="https://www.npmjs.com/package/node-tcp-relay">npm</a>
+
 ```bash
 sudo npm install -g node-tcp-relay
 ```
@@ -34,6 +35,7 @@ tcprelayc --host host --port 10080 --relayHost host --relayPort port [--numConn 
 `tls` enables secure TLS communication with relay server. If followed by `both`, TLS is also used with server behind the NAT. `rejectUnauthorized` enables checking for valid server certificate. Custom CA file can be specified using the `caFile` option. Use `pfx` option to specify certificate used to authenticate relay client at relay server.
 
 If you're relaying HTTP(S), use a reverse proxy such as http-proxy, between the relay client and the local service e.g.
+
 ```javascript
 var httpProxy = require('http-proxy');
 httpProxy.createProxyServer({target:'http://host:port'}).listen(port);
